@@ -515,3 +515,29 @@ E8's top network had learned to: holding a scoring card at that decision, it dis
 held (rules.md, the held-card invariant), so the mask now leaves them out; holding only a scoring card,
 the pass is all there is, and the check then ends the game. The step refuses one too, since the mask
 decides legality. Tests: `SpaceRace_Box6_SpaceWalk_*` in `engine/tests/test_card_edge_cases.cpp`.
+
+## 18. An opponent-held card's Event is offered only where it can fire (ENG-8, 2026-11-05)
+
+The play-mode mask's opponent-card branch offered EVENT unconditionally -- event-first is "legal
+exactly when Ops play is", and Ops play of a non-scoring card always is -- and so skipped
+`can_trigger_event`, which the friendly-card branch asks. A prerequisite card in the opponent's
+hands was therefore offered an EVENT that could not happen. NATO is the confirmed case: its text
+requires prior play of Warsaw Pact Formed or Marshall Plan "in order to be played as an Event",
+whichever side holds the card, and the USSR holds US cards routinely (the deal, Missile Envy,
+Grain Sales' draw), so the USSR could "play NATO as an event" at turn 1. Nothing corrupted --
+`run_trigger_event` returns at its unmet-prerequisite check, so the event silently did nothing
+(NATO went to the discard unfired) and the play continued into NATO's 4 Ops, exactly what the
+mask's Ops play offered anyway -- but an illegal choice was in the legal set, which neither the
+card text nor the reference engine has. Solidarity (John Paul II) and the flag-gated Events
+(Socialist Governments, Arab-Israeli War, Muslim Revolution, OPEC, Willy Brandt, Flower Power)
+are the same class; the one player-keyed gate, Defectors', cannot disagree, since Defectors is a
+US card and the branch only ever sees it in USSR hands, where it and the owner-side call the
+event will be re-asked with both say yes. Both branches now ask `can_trigger_event`, so the mask
+never offers what the dispatcher refuses. The step has no opinion of its own here -- it enforces
+the mask (P14), which is why fixing the mask alone also makes it refuse what it used to accept.
+
+The repo's own deterministic golden walk shows the fix directly: at game 1 decision 38 the USSR
+holds NATO from the deal at turn 1 AR4 with neither prerequisite played, and the walk's lowest
+legal action used to be the EVENT fizzle; it is now the Ops play. Tests: `NATOEventFromOpponentHandRequiresItsPrerequisite`,
+`OpponentCardWithoutPrerequisiteStillOffersEvent`, `SolidarityEventFromOpponentHandRequiresJohnPaulII`
+in `engine/tests/test_bugs_regression.cpp`.
